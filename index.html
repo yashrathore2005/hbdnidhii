@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="stylesheet" href="styling.css">
+<title>Happy Birthday, Nidhi ❤️</title>
+</head>
+<body>
+<canvas id="fx" width="1280" height="720" aria-hidden="true"></canvas>
+
+<header class="layer">
+  <h1>🎂 Happy Birthday, Nidhi ❤️</h1>
+  <div class="sub">For the girl whose smile makes every day brighter 🌸. This is my way of saying, Happy Birthday to the most amazing person💖</div>
+</header>
+
+<main class="stage layer" aria-label="3D rotating photo ring">
+  <div class="ring-wrap" id="wrap">
+    <div class="ring" id="ring">
+      <figure class="ph"><img src="1.jpg" alt="Nidhi 1"></figure>
+      <figure class="ph"><img src="2.jpg" alt="Nidhi 2"></figure>
+      <figure class="ph"><img src="3.jpg" alt="Nidhi 3"></figure>
+      <figure class="ph"><img src="4.jpg" alt="Nidhi 4"></figure>
+      <figure class="ph"><img src="5.jpg" alt="Nidhi 5"></figure>
+      <figure class="ph"><img src="6.jpg" alt="Nidhi 6"></figure>
+      <figure class="ph"><img src="7.jpg" alt="Nidhi 7"></figure>
+      <figure class="ph"><img src="8.jpg" alt="Nidhi 8"></figure>
+      <figure class="ph"><img src="9.jpg" alt="Nidhi 9"></figure>
+      <figure class="ph"><img src="10.jpg" alt="Nidhi 10"></figure>
+      <figure class="ph"><img src="11.jpg" alt="Nidhi 11"></figure>
+      <figure class="ph"><img src="12.jpg" alt="Nidhi 12"></figure>
+    </div>
+  </div>
+</main>
+
+<div class="vignette" aria-hidden="true"></div>
+
+<!-- Controls -->
+<div class="controls layer">
+  <button class="btn" id="play">▶️ Play</button>
+  <button class="btn secondary" id="pause">⏸ Pause</button>
+  <button class="btn" id="burst">🎉 Celebrate</button>
+  <input type="range" min="0.25" max="2.0" step="0.05" value="1" class="range" id="speed" />
+  <span class="small">speed</span>
+  <audio id="music" src="music.mp3"></audio>
+</div>
+
+<script>
+/* ===================== 3D RING ====================== */
+const ring = document.getElementById('ring');
+const items = [...document.querySelectorAll('.ph')];
+const wrap  = document.getElementById('wrap');
+
+let rotY = 0;
+let rotX = -6; // slight tilt
+let auto = true;
+let autoSpeed = 0.12;        // deg per frame (scaled by slider)
+let speedScale = 1;
+
+function layoutRing(){
+  const n = items.length;
+  const step = 360 / n;
+  const radius = Math.min(wrap.clientWidth, wrap.clientHeight) * 0.62; // dynamic
+  items.forEach((el,i)=>{
+    const ang = i * step;
+    el.style.transform = `rotateY(${ang}deg) translateZ(${radius}px) rotateY(${-ang}deg)`;
+  });
+}
+layoutRing();
+addEventListener('resize', layoutRing);
+
+function render(){
+  if(auto) rotY += autoSpeed * speedScale;
+  ring.style.transform = `rotateX(${rotX}deg) rotateY(${rotY}deg)`;
+  requestAnimationFrame(render);
+}
+render();
+
+/* Scroll/Swipe control with inertia */
+let vel = 0;
+let lastT = performance.now();
+
+function onWheel(e){
+  e.preventDefault();
+  vel += e.deltaY * 0.15; // sensitivity
+  auto = false;
+}
+addEventListener('wheel', onWheel, {passive:false});
+
+let touchX = 0, active = false;
+addEventListener('touchstart', (e)=>{ active=true; touchX = e.touches[0].clientX; auto=false; }, {passive:true});
+addEventListener('touchmove', (e)=>{
+  const x = e.touches[0].clientX;
+  vel += (touchX - x) * 0.6; // drag sensitivity
+  touchX = x;
+}, {passive:true});
+addEventListener('touchend', ()=>{ active=false; });
+
+/* Inertia & damping */
+function physics(){
+  const now = performance.now();
+  const dt = (now - lastT)/16.67; // frames
+  lastT = now;
+
+  rotY += vel * 0.02 * dt;
+  vel *= Math.pow(0.92, dt); // damping
+  requestAnimationFrame(physics);
+}
+physics();
+
+/* Controls */
+const playBtn = document.getElementById('play');
+const pauseBtn = document.getElementById('pause');
+const speed = document.getElementById('speed');
+
+playBtn.onclick  = ()=>{ auto = true; document.getElementById('music').play().catch(()=>{}); };
+pauseBtn.onclick = ()=>{ auto = false; document.getElementById('music').pause(); };
+speed.oninput    = (e)=>{ speedScale = parseFloat(e.target.value); };
+
+/* Click to slight pop focus */
+items.forEach((el,i)=>{
+  el.addEventListener('click', ()=>{
+    // rotate that card to front
+    const n = items.length;
+    const step = 360 / n;
+    const targetY = -i * step;
+    rotY = targetY;
+    auto = false;
+  });
+});
+
+/* =============== Background Particles (Canvas) =============== */
+const cv = document.getElementById('fx');
+const ctx = cv.getContext('2d');
+function resizeCanvas(){
+  cv.width = innerWidth;
+  cv.height = innerHeight;
+}
+resizeCanvas(); addEventListener('resize', resizeCanvas);
+
+const particles = Array.from({length: 90}).map(()=>({
+  x: Math.random()*cv.width,
+  y: Math.random()*cv.height,
+  r: Math.random()*1.8 + 0.6,
+  v: Math.random()*0.4 + 0.2,
+  a: Math.random()*360
+}));
+
+function drawFX(){
+  ctx.clearRect(0,0,cv.width,cv.height);
+  for(const p of particles){
+    p.y += p.v; p.x += Math.sin((p.a+=0.6)*Math.PI/180)*0.3;
+    if(p.y > cv.height+10){ p.y = -10; p.x = Math.random()*cv.width; }
+    ctx.beginPath();
+    ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+    ctx.fillStyle = 'rgba(255,255,255,0.35)';
+    ctx.fill();
+  }
+  requestAnimationFrame(drawFX);
+}
+drawFX();
+
+/* =============== Confetti Burst =============== */
+function confettiBurst(n=120){
+  for(let i=0;i<n;i++){
+    const b = document.createElement('div');
+    b.className = 'confetti';
+    b.style.left = (innerWidth/2 + (Math.random()*140-70))+'px';
+    b.style.background = `hsl(${Math.random()*360},95%,60%)`;
+    const size = Math.random()*10 + 6;
+    b.style.width = size+'px'; b.style.height = (size*1.2)+'px';
+    document.body.appendChild(b);
+    const xVel = (Math.random()*2-1) * 6;
+    const yVel = (Math.random()*-6 - 6);
+    const rot = (Math.random()*720 - 360);
+    const dur = 120 + Math.random()*60;
+
+    let t=0, x=innerWidth/2, y=innerHeight*0.35;
+    (function drop(){
+      t++;
+      // basic physics
+      x += xVel;
+      y += yVel + 0.18 * t; // gravity
+      b.style.transform = `translate(${x}px, ${y}px) rotate(${rot + t*8}deg)`;
+      if(t<dur) requestAnimationFrame(drop);
+      else b.remove();
+    })();
+  }
+}
+document.getElementById('burst').onclick = ()=> confettiBurst(160);
+
+/* Autoplay music after user gesture (required by browsers) */
+addEventListener('pointerdown', function once(){
+  const m = document.getElementById('music');
+  m.volume = 0.9;
+  m.play().catch(()=>{}); // ignore if blocked
+  removeEventListener('pointerdown', once);
+});
+
+/* Accessibility: keyboard rotate */
+addEventListener('keydown', (e)=>{
+  if(e.key === 'ArrowLeft'){ vel += 25; auto = false; }
+  if(e.key === 'ArrowRight'){ vel -= 25; auto = false; }
+});
+</script>
+</body>
+</html>
